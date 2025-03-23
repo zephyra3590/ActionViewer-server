@@ -2,14 +2,14 @@ const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs'); // Use standard fs for existsSync
+const fsPromises = require('fs').promises; // Alias fs.promises for async operations
 
 const app = express();
 const port = 3000;
 
-// Middleware to parse JSON and URL-encoded bodies
-app.use(express.json()); // Add this if your frontend sends JSON
-app.use(express.urlencoded({ extended: true })); // Add this for form data
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 const uploadDir = '/home/work/datasets/EuroCup2016/mp4';
@@ -22,27 +22,32 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    console.log('Request Body:', req.body); // Debug: Log the entire body
-    console.log('File Object:', file); // Debug: Log the file details
-    const fileName = req.body.fileName || file.originalname;
-    console.log('Using fileName:', fileName); // Debug: Log the chosen filename
-    cb(null, fileName);
+    cb(null, file.originalname); // Temporarily use original name
   }
 });
 
 const upload = multer({ storage: storage });
 
-// Upload endpoint
-app.post('/api/upload-video', upload.single('video'), (req, res) => {
+app.post('/api/upload-video', upload.single('video'), async (req, res) => {
   try {
     console.log('Received Request:', {
       body: req.body,
       file: req.file
-    }); // Debug: Log request details
-    const fileName = req.body.fileName;
+    });
+
     if (!req.file) {
       return res.status(400).json({ error: 'No video file uploaded' });
     }
+
+    const fileName = req.body.fileName || req.file.originalname;
+    const oldPath = req.file.path;
+    const newPath = path.join(uploadDir, fileName);
+
+    if (fileName !== req.file.originalname) {
+      await fsPromises.rename(oldPath, newPath); // Use fs.promises for rename
+      console.log(`Renamed file from ${oldPath} to ${newPath}`);
+    }
+
     res.json({
       message: `Success! ${fileName} was saved to ${uploadDir}.`
     });
