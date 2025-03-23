@@ -1,1 +1,5 @@
-asdf
+npm install express multer cors
+node server.js
+
+You should see:
+Server running on http://localhost:3000
