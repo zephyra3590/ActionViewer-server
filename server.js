@@ -5,32 +5,40 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const port = 3000; // You can change this port if needed
+const port = 3000;
 
-// Enable CORS to allow requests from your frontend
+// Middleware to parse JSON and URL-encoded bodies
+app.use(express.json()); // Add this if your frontend sends JSON
+app.use(express.urlencoded({ extended: true })); // Add this for form data
 app.use(cors());
 
-// Set up storage for uploaded files
 const uploadDir = '/home/work/datasets/EuroCup2016/mp4';
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true }); // Create directory if it doesn't exist
+  fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir); // Save files to this directory
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const fileName = req.body.fileName || file.originalname; // Use provided fileName or original name
+    console.log('Request Body:', req.body); // Debug: Log the entire body
+    console.log('File Object:', file); // Debug: Log the file details
+    const fileName = req.body.fileName || file.originalname;
+    console.log('Using fileName:', fileName); // Debug: Log the chosen filename
     cb(null, fileName);
   }
 });
 
 const upload = multer({ storage: storage });
 
-// Define the upload endpoint
+// Upload endpoint
 app.post('/api/upload-video', upload.single('video'), (req, res) => {
   try {
+    console.log('Received Request:', {
+      body: req.body,
+      file: req.file
+    }); // Debug: Log request details
     const fileName = req.body.fileName;
     if (!req.file) {
       return res.status(400).json({ error: 'No video file uploaded' });
@@ -44,7 +52,6 @@ app.post('/api/upload-video', upload.single('video'), (req, res) => {
   }
 });
 
-// Start the server
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
