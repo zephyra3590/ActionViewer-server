@@ -16,5 +16,10 @@
   "bugs": {
     "url": "https://github.com/zephyra3590/ActionViewer-server/issues"
   },
-  "homepage": "https://github.com/zephyra3590/ActionViewer-server#readme"
+  "homepage": "https://github.com/zephyra3590/ActionViewer-server#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.2"
+  }
 }
