@@ -32,7 +32,7 @@ const upload = multer({ storage: storage });
 const runFrameExtraction = (fileName) => {
   return new Promise((resolve, reject) => {
     // Command to activate conda environment and run the script
-    const command = `conda run -n paddle3.0 /bin/bash -c "cd /workspace/PaddleVideo/applications/FootballAction/datasets/script && python get_frames_pcm.py ${fileName}"`;
+    const command = `conda run -n paddle3.0 /bin/bash -c "cd /workspace/PaddleVideo/applications/FootballAction/datasets/script && python get_frames_pcm.py mp4/${fileName}"`;
     
     console.log(`Executing command: ${command}`);
     
