@@ -7,16 +7,13 @@ const fsPromises = require('fs').promises;
 const { exec } = require('child_process');
 const app = express();
 const port = 3000;
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
-
 const uploadDir = '/home/work/datasets/EuroCup2016/mp4';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
-
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -25,16 +22,14 @@ const storage = multer.diskStorage({
     cb(null, file.originalname); // Temporarily use original name
   }
 });
-
 const upload = multer({ storage: storage });
 
 // Function to run frame extraction in conda environment
 const runFrameExtraction = (fileName) => {
   return new Promise((resolve, reject) => {
-    // Command to activate conda environment and run the script
     const command = `conda run -n paddle3.0 /bin/bash -c "cd /workspace/PaddleVideo/applications/FootballAction/datasets/script && python get_frames_pcm.py mp4/${fileName}"`;
     
-    console.log(`Executing command: ${command}`);
+    console.log(`Executing frame extraction command: ${command}`);
     
     exec(command, (error, stdout, stderr) => {
       if (error) {
@@ -50,6 +45,28 @@ const runFrameExtraction = (fileName) => {
   });
 };
 
+// Function to run prediction in conda environment
+const runPrediction = (fileName) => {
+  return new Promise((resolve, reject) => {
+    const command = `conda run -n paddle3.0 /bin/bash -c "cd /workspace/PaddleVideo/applications/FootballAction/predict && python predict.py ~/datasets/EuroCup2016/mp4/${fileName}"`;
+    
+    console.log(`Executing prediction command: ${command}`);
+    
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Prediction error: ${error.message}`);
+        return reject(error);
+      }
+      if (stderr) {
+        console.log(`Prediction stderr: ${stderr}`);
+      }
+      console.log(`Prediction stdout: ${stdout}`);
+      resolve({ stdout, stderr });
+    });
+  });
+};
+
+// Existing upload video endpoint remains the same...
 app.post('/api/upload-video', upload.single('video'), async (req, res) => {
   try {
     console.log('Received Request:', {
@@ -89,7 +106,36 @@ app.post('/api/upload-video', upload.single('video'), async (req, res) => {
   }
 });
 
-// Add endpoint to check frame extraction status
+// New endpoint to trigger prediction
+app.post('/api/predict', async (req, res) => {
+  try {
+    const { fileName } = req.body;
+    
+    if (!fileName) {
+      return res.status(400).json({ error: 'No file name provided' });
+    }
+    
+    // Initiate prediction process
+    try {
+      const predictionResult = await runPrediction(fileName);
+      res.json({
+        message: 'Prediction completed successfully',
+        details: predictionResult.stdout
+      });
+    } catch (predictionError) {
+      console.error(`Prediction failed: ${predictionError.message}`);
+      res.status(500).json({ 
+        error: 'Prediction process failed', 
+        details: predictionError.message 
+      });
+    }
+  } catch (error) {
+    console.error('Prediction endpoint error:', error);
+    res.status(500).json({ error: 'Server error during prediction' });
+  }
+});
+
+// Existing extraction status endpoint
 app.get('/api/extraction-status/:fileName', async (req, res) => {
   const fileName = req.params.fileName;
   // You could implement logic here to check if frames have been extracted
