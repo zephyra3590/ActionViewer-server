@@ -7,6 +7,7 @@ const fsPromises = require('fs').promises;
 const { exec } = require('child_process');
 const app = express();
 const port = 3000;
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
@@ -143,6 +144,30 @@ app.get('/api/extraction-status/:fileName', async (req, res) => {
   res.json({
     fileName,
     status: 'Processing frame extraction...'
+  });
+});
+
+// New endpoint to download JSON file
+app.get('/api/download-json', (req, res) => {
+  const { fileName } = req.query;
+  
+  if (!fileName) {
+    return res.status(400).json({ error: 'No file name provided' });
+  }
+  
+  const jsonFilePath = path.join('/home/work/datasets/EuroCup2016/mp4', fileName);
+  
+  // Check if file exists
+  if (!fs.existsSync(jsonFilePath)) {
+    return res.status(404).json({ error: 'JSON file not found' });
+  }
+  
+  // Send the file for download
+  res.download(jsonFilePath, fileName, (err) => {
+    if (err) {
+      console.error('Download error:', err);
+      res.status(500).json({ error: 'Error downloading file' });
+    }
   });
 });
 
